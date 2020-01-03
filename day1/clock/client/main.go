@@ -8,12 +8,12 @@ import (
 )
 
 func main() {
-	conn, err := net.Dial("tcp","localhost:13301")
+	conn, err := net.Dial("tcp", "localhost:13301")
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer conn.Close()
-	mustCopy(os.Stdout,conn)
+	mustCopy(os.Stdout, conn)
 }
 
 func mustCopy(dst *os.File, src net.Conn) {

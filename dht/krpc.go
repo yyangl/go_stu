@@ -9,10 +9,10 @@ type Krpc struct {
 	a interface{}
 }
 
-func (k *Krpc)Encode() (string,error) {
+func (k *Krpc) Encode() (string, error) {
 	return bencode.EncodeString(k)
 }
 
-func (k *Krpc)SetArgs(args interface{})  {
+func (k *Krpc) SetArgs(args interface{}) {
 	k.a = args
 }

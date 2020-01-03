@@ -12,11 +12,11 @@ import (
 type Id []byte
 type Nid *big.Int
 
-func GenerateId() Id  {
+func GenerateId() Id {
 	random := rand.New(rand.NewSource(time.Now().UnixNano()))
 	h := sha1.New()
-	io.WriteString(h,time.Now().String())
-	io.WriteString(h,string(random.Int()))
+	io.WriteString(h, time.Now().String())
+	io.WriteString(h, string(random.Int()))
 	return h.Sum(nil)
 }
 

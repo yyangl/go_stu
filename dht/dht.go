@@ -12,8 +12,9 @@ import (
 	"syscall"
 	"time"
 )
+
 //好友节点，带你进入DHT网络
-var BOOTSTRAP = []string {
+var BOOTSTRAP = []string{
 	"67.215.246.10:6881",
 	"91.121.59.153:6881",
 	"82.221.103.244:6881",
@@ -21,11 +22,10 @@ var BOOTSTRAP = []string {
 }
 
 const (
-	try = 3
+	try                = 3
 	bucketExpiredAfter = 180 * time.Second
-	nodeExpiredAfter = 60 * time.Second
+	nodeExpiredAfter   = 60 * time.Second
 )
-
 
 type DHT struct {
 	// candidates are udp, udp4, udp6
@@ -39,27 +39,26 @@ type DHT struct {
 	// node节点的过期时间
 	NodeExpiredAfter time.Duration
 	// 重试次数
-	Try int
-	conn *net.UDPConn
+	Try   int
+	conn  *net.UDPConn
 	route *Route
-	nid Id
+	nid   Id
 }
 
 func New(addr string) *DHT {
 	return &DHT{
-		Network:"udp4",
-		Try:try,
-		KBucketExpiredAfter:bucketExpiredAfter,
-		NodeExpiredAfter:nodeExpiredAfter,
-		Address:addr,
-		route: NewRoute(),
-		nid:GenerateId(),
+		Network:             "udp4",
+		Try:                 try,
+		KBucketExpiredAfter: bucketExpiredAfter,
+		NodeExpiredAfter:    nodeExpiredAfter,
+		Address:             addr,
+		route:               NewRoute(),
+		nid:                 GenerateId(),
 	}
 }
 
-
-func (d *DHT)init()  {
-	listener, err := net.ListenPacket(d.Network,d.Address)
+func (d *DHT) init() {
+	listener, err := net.ListenPacket(d.Network, d.Address)
 	if err != nil {
 		panic(err)
 	}
@@ -69,7 +68,7 @@ func (d *DHT)init()  {
 	go d.ListenerAndServer()
 }
 
-func (d *DHT)Run() {
+func (d *DHT) Run() {
 	// 初始化DHT
 	d.init()
 	// 启动
@@ -83,7 +82,7 @@ func (d *DHT)Run() {
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
 	go func(twg *sync.WaitGroup) {
-		sig := make(chan os.Signal,2)
+		sig := make(chan os.Signal, 2)
 		signal.Notify(sig, syscall.SIGTERM, syscall.SIGINT)
 		<-sig
 
@@ -97,9 +96,9 @@ func (d *DHT)Run() {
 // 启动DHT
 func (d *DHT) bootStrap() {
 	for _, host := range BOOTSTRAP {
-		addr,err := net.ResolveUDPAddr("udp",host)
+		addr, err := net.ResolveUDPAddr("udp", host)
 		if err != nil {
-			log.Fatalf("节点错误%s",host)
+			log.Fatalf("节点错误%s", host)
 			return
 		}
 		node := new(Node)
@@ -112,7 +111,7 @@ func (d *DHT) findNode(node *Node) {
 	var id Id
 	if node.id != nil {
 		id = node.id.Neighbor(d.nid)
-	}else {
+	} else {
 		id = d.nid
 	}
 	v := make(map[string]interface{})
@@ -125,45 +124,45 @@ func (d *DHT) findNode(node *Node) {
 	v["a"] = args
 	data, err := bencode.EncodeBytes(v)
 	if err != nil {
-		log.Printf("编码失败%s",v)
+		log.Printf("编码失败%s", v)
 		return
 	}
 	//log.Printf("发送数据%s",data)
-	_ = d.send([]byte(data),node.addr)
+	_ = d.send([]byte(data), node.addr)
 }
 
-func (d *DHT)send(data []byte,addr *net.UDPAddr)error  {
-	_,err := d.conn.WriteToUDP(data,addr)
+func (d *DHT) send(data []byte, addr *net.UDPAddr) error {
+	_, err := d.conn.WriteToUDP(data, addr)
 	if err != nil {
-		log.Fatalf("发送udp数据失败，地址%v",addr)
-	}else {
-		log.Printf("发送udp数据成功，地址%v",addr)
+		log.Fatalf("发送udp数据失败，地址%v", addr)
+	} else {
+		log.Printf("发送udp数据成功，地址%v", addr)
 	}
 	return err
 }
 
 func (d *DHT) ListenerAndServer() {
-	b := make([]byte,1000)
+	b := make([]byte, 1000)
 	for {
 		n, addr, err := d.conn.ReadFromUDP(b)
 		if err != nil {
 			continue
 		}
 		//log.Printf("收到消息,addr%v",addr)
-		go d.Decode(b[:n],addr)
+		go d.Decode(b[:n], addr)
 	}
 }
 
 func (d *DHT) Decode(data []byte, addr *net.UDPAddr) {
 	message := make(map[string]interface{})
-	err := bencode.DecodeBytes(data,&message)
+	err := bencode.DecodeBytes(data, &message)
 	if err != nil {
-		log.Fatalf("解码回复消息失败%v",err)
+		log.Fatalf("解码回复消息失败%v", err)
 	}
-	if _,ok := message["t"];!ok {
+	if _, ok := message["t"]; !ok {
 		return
 	}
-	if _,ok := message["y"];!ok {
+	if _, ok := message["y"]; !ok {
 		return
 	}
 
@@ -173,8 +172,6 @@ func (d *DHT) Decode(data []byte, addr *net.UDPAddr) {
 			// 向路由表中插入节点
 			d.putNodes(r)
 		}
-		log.Print("message['r']不ok")
-		log.Printf("message['r'] = %v\n",message["r"])
 		break
 	case "q":
 		break
@@ -184,11 +181,18 @@ func (d *DHT) Decode(data []byte, addr *net.UDPAddr) {
 }
 
 func (d *DHT) putNodes(r map[string]interface{}) {
-	if nodestr ,ok := r["node"].(string);ok {
-		nodes := ParseByteStream([]byte(nodestr))
-		for node := range nodes {
-			fmt.Printf("%v\n",node)
+	if nodeStr, ok := r["nodes"].(string); ok {
+		nodes := ParseByteStream([]byte(nodeStr))
+		//fmt.Printf("%v",nodes)
+		for _, node := range nodes {
+			fmt.Printf("%v\n", node.id)
 		}
 	}
 }
 
+func (d *DHT) appendNode(node *Node) {
+	if node.id.Int() == d.nid.Int() {
+		return
+	}
+	d.route.appendNode(node)
+}

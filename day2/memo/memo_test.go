@@ -8,9 +8,9 @@ import (
 
 var httpGetBody = memotest.HTTPGetBody
 
-func Test(t *testing.T)  {
+func Test(t *testing.T) {
 	m := memo.New(httpGetBody)
-	memotest.Sequential(t,m)
+	memotest.Sequential(t, m)
 }
 
 // NOTE: not concurrency-safe!  Test fails.
